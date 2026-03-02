@@ -2,6 +2,7 @@ import os
 import json
 import asyncio
 import threading
+import random
 
 import discord
 from flask import Flask
@@ -18,6 +19,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 SCORES_FILE = Path("scores.json")
+QUESTIONS_FILE = Path("questions.json")
 
 
 def load_scores() -> dict:
@@ -41,21 +43,18 @@ def save_scores(scores: dict) -> None:
         # In a simple bot we silently ignore write errors
         pass
 
-# Define your scavenger hunt questions and answers
-TRIVIA_QUESTIONS = [
-    {
-        "question": "Question 1: What is the capital of France?",
-        "answer": "paris",
-    },
-    {
-        "question": "Question 2: In computing, what does 'CPU' stand for?",
-        "answer": "central processing unit",
-    },
-    {
-        "question": "Question 3: Which planet is known as the Red Planet?",
-        "answer": "mars",
-    },
-]
+
+def load_questions() -> list:
+    if not QUESTIONS_FILE.exists():
+        return []
+    try:
+        with QUESTIONS_FILE.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+            return []
+    except (json.JSONDecodeError, OSError):
+        return []
 
 
 @bot.event
@@ -75,10 +74,20 @@ async def startotter(ctx: commands.Context):
     def check(m: discord.Message):
         # Only accept messages from the command user in the same channel
         return m.author == ctx.author and m.channel == ctx.channel
+    questions = load_questions()
+    if not questions:
+        await ctx.send("No questions are configured yet.")
+        return
 
-    for idx, item in enumerate(TRIVIA_QUESTIONS, start=1):
-        question = item["question"]
-        correct_answer = item["answer"]
+    # Choose three unique random questions (or fewer if not enough exist)
+    num_to_ask = min(3, len(questions))
+    selected_questions = random.sample(questions, k=num_to_ask)
+
+    correct_count = 0
+
+    for idx, item in enumerate(selected_questions, start=1):
+        question = item.get("question", "No question text provided.")
+        correct_answer = str(item.get("answer", "")).strip().lower()
 
         await ctx.send(question)
 
@@ -97,16 +106,8 @@ async def startotter(ctx: commands.Context):
             user_answer = msg.content.strip().lower()
 
             if user_answer == correct_answer:
-                # Award 10 points for a correct answer
-                scores = load_scores()
-                user_id = str(ctx.author.id)
-                current = scores.get(user_id, {"name": ctx.author.name, "points": 0})
-                current["name"] = ctx.author.name
-                current["points"] = int(current.get("points", 0)) + 10
-                scores[user_id] = current
-                save_scores(scores)
-
-                if idx < len(TRIVIA_QUESTIONS):
+                correct_count += 1
+                if idx < len(selected_questions):
                     await ctx.send(
                         f"🎉 Correct, {ctx.author.mention}! Here's your next clue..."
                     )
@@ -120,6 +121,16 @@ async def startotter(ctx: commands.Context):
                 await ctx.send(
                     f"❌ Not quite, {ctx.author.mention}. Try again!"
                 )
+
+    # Award 10 points only if all three questions in this session were answered correctly
+    if correct_count == 3:
+        scores = load_scores()
+        user_id = str(ctx.author.id)
+        current = scores.get(user_id, {"name": ctx.author.name, "points": 0})
+        current["name"] = ctx.author.name
+        current["points"] = int(current.get("points", 0)) + 10
+        scores[user_id] = current
+        save_scores(scores)
 
 
 @bot.command(name="topotter")

@@ -1,6 +1,8 @@
 import os
+import json
 import asyncio
 import discord
+from pathlib import Path
 from dotenv import load_dotenv
 from discord.ext import commands
 
@@ -11,6 +13,30 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+SCORES_FILE = Path("scores.json")
+
+
+def load_scores() -> dict:
+    if not SCORES_FILE.exists():
+        return {}
+    try:
+        with SCORES_FILE.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data
+            return {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_scores(scores: dict) -> None:
+    try:
+        with SCORES_FILE.open("w", encoding="utf-8") as f:
+            json.dump(scores, f, indent=2)
+    except OSError:
+        # In a simple bot we silently ignore write errors
+        pass
 
 # Define your scavenger hunt questions and answers
 TRIVIA_QUESTIONS = [
@@ -35,8 +61,8 @@ async def on_ready():
     print("------")
 
 
-@bot.command(name="start_hunt")
-async def start_hunt(ctx: commands.Context):
+@bot.command(name="startotter")
+async def startotter(ctx: commands.Context):
     """Starts a 3-question trivia scavenger hunt."""
     await ctx.send(
         f"Welcome to the scavenger hunt, {ctx.author.mention}! "
@@ -68,6 +94,15 @@ async def start_hunt(ctx: commands.Context):
             user_answer = msg.content.strip().lower()
 
             if user_answer == correct_answer:
+                # Award 10 points for a correct answer
+                scores = load_scores()
+                user_id = str(ctx.author.id)
+                current = scores.get(user_id, {"name": ctx.author.name, "points": 0})
+                current["name"] = ctx.author.name
+                current["points"] = int(current.get("points", 0)) + 10
+                scores[user_id] = current
+                save_scores(scores)
+
                 if idx < len(TRIVIA_QUESTIONS):
                     await ctx.send(
                         f"🎉 Correct, {ctx.author.mention}! Here's your next clue..."
@@ -82,6 +117,38 @@ async def start_hunt(ctx: commands.Context):
                 await ctx.send(
                     f"❌ Not quite, {ctx.author.mention}. Try again!"
                 )
+
+
+@bot.command(name="topotter")
+async def topotter(ctx: commands.Context):
+    """Show the top 5 players by points."""
+    scores = load_scores()
+    if not scores:
+        await ctx.send("No scores yet. Play the scavenger hunt with `!startotter`!")
+        return
+
+    # Sort by points descending
+    sorted_players = sorted(
+        scores.items(),
+        key=lambda item: int(item[1].get("points", 0)),
+        reverse=True,
+    )[:5]
+
+    embed = discord.Embed(
+        title="Scavenger Hunt Leaderboard",
+        color=discord.Color.gold(),
+    )
+
+    for rank, (user_id, info) in enumerate(sorted_players, start=1):
+        name = info.get("name", f"User {user_id}")
+        points = info.get("points", 0)
+        embed.add_field(
+            name=f"#{rank} {name}",
+            value=f"Points: {points}",
+            inline=False,
+        )
+
+    await ctx.send(embed=embed)
 
 
 if __name__ == "__main__":

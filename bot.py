@@ -1,7 +1,10 @@
 import os
 import json
 import asyncio
+import threading
+
 import discord
+from flask import Flask
 from pathlib import Path
 from dotenv import load_dotenv
 from discord.ext import commands
@@ -151,5 +154,20 @@ async def topotter(ctx: commands.Context):
     await ctx.send(embed=embed)
 
 
+app = Flask(__name__)
+
+
+@app.route("/")
+def index():
+    return "Bot is Alive!"
+
+
+def run_web():
+    app.run(host="0.0.0.0", port=8080)
+
+
 if __name__ == "__main__":
+    web_thread = threading.Thread(target=run_web, daemon=True)
+    web_thread.start()
+
     bot.run(os.getenv("DISCORD_TOKEN"))

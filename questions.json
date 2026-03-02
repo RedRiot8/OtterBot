@@ -1,0 +1,52 @@
+[
+    {
+      "id": 1,
+      "question": "What is the capital of France?",
+      "answer": "paris"
+    },
+    {
+      "id": 2,
+      "question": "What is the largest planet in our solar system?",
+      "answer": "jupiter"
+    },
+    {
+      "id": 3,
+      "question": "What element has the chemical symbol 'O'?",
+      "answer": "oxygen"
+    },
+    {
+      "id": 4,
+      "question": "Who wrote 'Romeo and Juliet'?",
+      "answer": "william shakespeare"
+    },
+    {
+      "id": 5,
+      "question": "What is the fastest land animal?",
+      "answer": "cheetah"
+    },
+    {
+      "id": 6,
+      "question": "What is the currency of Japan?",
+      "answer": "yen"
+    },
+    {
+      "id": 7,
+      "question": "What is the hardest natural substance on Earth?",
+      "answer": "diamond"
+    },
+    {
+      "id": 8,
+      "question": "How many bones are in the adult human body?",
+      "answer": "206"
+    },
+    {
+      "id": 9,
+      "question": "Which planet is known as the Red Planet?",
+      "answer": "mars"
+    },
+    {
+      "id": 10,
+      "question": "What is the main ingredient in guacamole?",
+      "answer": "avocado"
+    }
+  ]

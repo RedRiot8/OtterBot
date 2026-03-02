@@ -1,11 +1,9 @@
 import os
 import json
 import asyncio
-import threading
 import random
 
 import discord
-from flask import Flask
 from pathlib import Path
 from dotenv import load_dotenv
 from discord.ext import commands
@@ -18,8 +16,9 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-SCORES_FILE = Path("scores.json")
-QUESTIONS_FILE = Path("questions.json")
+BASE_DIR = Path(__file__).resolve().parent
+SCORES_FILE = BASE_DIR / "scores.json"
+QUESTIONS_FILE = BASE_DIR / "questions.json"
 
 
 def load_scores() -> dict:
@@ -165,20 +164,7 @@ async def topotter(ctx: commands.Context):
     await ctx.send(embed=embed)
 
 
-app = Flask(__name__)
-
-
-@app.route("/")
-def index():
-    return "Bot is Alive!"
-
-
-def run_web():
-    app.run(host="0.0.0.0", port=8080)
-
-
 if __name__ == "__main__":
-    web_thread = threading.Thread(target=run_web, daemon=True)
-    web_thread.start()
-
+    # Reset scores at each run so every session starts fresh
+    save_scores({})
     bot.run(os.getenv("DISCORD_TOKEN"))

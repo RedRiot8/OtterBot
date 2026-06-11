@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m py_compile bot.py)",
+      "Bash(python3 -m py_compile database.py)"
+    ]
+  }
+}
